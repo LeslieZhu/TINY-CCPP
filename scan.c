@@ -10,12 +10,14 @@
 #include "scan.h"
 
 /* states in scanner DFA */
-typedef enum
-   { START,INASSIGN,INCOMMENT,INNUM,INID,DONE }
-   StateType;
+typedef enum { 
+    START,INASSIGN,INCOMMENT,INNUM,INID,DONE 
+} StateType;
 
 /* lexeme of identifier or reserved word */
 char tokenString[MAXTOKENLEN+1];
+char *allocp = tokenString;
+
 
 /* BUFLEN = length of the input buffer for
    source code lines */
@@ -52,22 +54,67 @@ static void ungetNextChar(void)
 { if (!EOF_flag) linepos-- ;}
 
 /* lookup table of reserved words */
+/* for bianysearch function */
 static struct
     { char* str;
       TokenType tok;
-    } reservedWords[MAXRESERVED]
-   = {{"if",IF},{"then",THEN},{"else",ELSE},{"end",END},
-      {"repeat",REPEAT},{"until",UNTIL},{"read",READ},
-      {"write",WRITE}};
+    } reservedWords[MAXRESERVED] = {
+    {"else",ELSE},
+    {"end",END},
+    {"if",IF},
+    {"read",READ},
+    {"repeat",REPEAT},
+    {"then",THEN},
+    {"until",UNTIL},
+    {"write",WRITE}};
+
+
+/* binary search */
+/* usage: binarysearch(0,MAXRESERVED,s) */
+static TokenType binarysearch(int start, int end, char * s)
+{
+    int mid =  (start+end)%2 == 0 ? (start+end)/2 : (start+end)/2+1;
+    //int debug=0;
+
+    printf("debug: start=%d, mid=%d, end=%d, str=%s,find-str=%s\n",start,mid,end,s,reservedWords[mid].str);
+    //scanf("%c",&debug);
+
+    if(mid == end){
+        printf("debug, find it! str=%s, return ID\n",s);
+        return ID;
+    }
+    
+    if (strcmp(reservedWords[mid].str, s) > 0){ 
+        return binarysearch(start,mid,s);
+    } else if (strcmp(reservedWords[mid].str, s) < 0){ 
+        return binarysearch(mid,end,s);
+    } else {
+        printf("debug, find it! str=%s, find-str=%s\n",s,reservedWords[mid].str);
+        return reservedWords[mid].tok;
+    }
+}
+
+
 
 /* lookup an identifier to see if it is a reserved word */
 /* uses linear search */
+/* 线性查找 */
 static TokenType reservedLookup (char * s)
-{ int i;
-  for (i=0;i<MAXRESERVED;i++)
-    if (!strcmp(s,reservedWords[i].str))
-      return reservedWords[i].tok;
-  return ID;
+{ 
+    /* debug begin*/
+    return binarysearch(0,MAXRESERVED-1,s); 
+
+    int i;
+    for (i=0;i<MAXRESERVED;i++)
+        {
+            if (!strcmp(s,reservedWords[i].str))
+                {
+                    printf("debug, find it! str=%s, find-str=%s\n",s,reservedWords[i].str);
+                    return reservedWords[i].tok;
+                }
+        }
+    printf("debug, find it! str=%s, find-str=ID\n",s);
+    return ID;
 }
 
 /****************************************/
@@ -186,18 +233,35 @@ TokenType getToken(void)
          currentToken = ERROR;
          break;
      }
-     if ((save) && (tokenStringIndex <= MAXTOKENLEN))
-       tokenString[tokenStringIndex++] = (char) c;
+
+     if (save){
+         if(tokenStringIndex <= MAXTOKENLEN){ /* 2.29 */
+             allocp[tokenStringIndex++] = (char) c;
+         } else if(tokenStringIndex <= ALLOCSIZE){ /* still has space */
+             if(strlen(allocp) == (MAXTOKENLEN - 1)){
+                 allocp = (char *)malloc(sizeof(char)*ALLOCSIZE);
+                 strcpy(allocp,tokenString);
+             }
+             allocp[tokenStringIndex++] = (char) c;
+         } 
+     }
+
      if (state == DONE)
-     { tokenString[tokenStringIndex] = '\0';
+     { allocp[tokenStringIndex] = '\0';
        if (currentToken == ID)
-         currentToken = reservedLookup(tokenString);
+         currentToken = reservedLookup(allocp);
      }
    }
    if (TraceScan) {
      fprintf(listing,"\t%d: ",lineno);
-     printToken(currentToken,tokenString);
+     printToken(currentToken,allocp);
    }
+
+   /* free */
+   if (allocp >= tokenString && strlen(allocp) < ALLOCSIZE){
+       allocp = tokenString;
+   }
+
    return currentToken;
 } /* end getToken */
 

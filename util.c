@@ -56,6 +56,7 @@ void printToken( TokenType token, const char* tokenString )
 /* Function newStmtNode creates a new statement
  * node for syntax tree construction
  */
+/* 语法树 */
 TreeNode * newStmtNode(StmtKind kind)
 { TreeNode * t = (TreeNode *) malloc(sizeof(TreeNode));
   int i;
@@ -74,6 +75,7 @@ TreeNode * newStmtNode(StmtKind kind)
 /* Function newExpNode creates a new expression 
  * node for syntax tree construction
  */
+/* 语义树 */
 TreeNode * newExpNode(ExpKind kind)
 { TreeNode * t = (TreeNode *) malloc(sizeof(TreeNode));
   int i;
