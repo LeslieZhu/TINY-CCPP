@@ -6,7 +6,7 @@
 
 CC = gcc
 
-CFLAGS = -g -Wall
+CFLAGS = -g -Wall 
 
 OBJS = main.o util.o scan.o parse.o symtab.o analyze.o code.o cgen.o
 
